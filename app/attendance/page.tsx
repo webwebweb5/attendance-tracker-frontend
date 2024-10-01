@@ -29,6 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { attendanceSchema } from "@/schemas";
 
 interface Location {
   lat: number | null;
@@ -43,22 +44,7 @@ const universityLat = 18.824518;
 const universityLng = 99.045474;
 const radius = 1.5;
 
-const attendanceSchema = z.object({
-  studentId: z.string().min(2, {
-    message: "Student Id is required",
-  }),
-  courseId: z.string().min(2, {
-    message: "Course Id is required",
-  }),
-  action: z.string().min(2, {
-    message: "Action Id is required",
-  }),
-});
-
 export default function Attendance() {
-  // const [studentId, setStudentId] = useState<string>("");
-  // const [courseId, setCourseId] = useState<string>("");
-  // const [action, setAction] = useState<string>("");
   const [location, setLocation] = useState<Location>({ lat: null, lng: null });
   const [isInUniversity, setIsInUniversity] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

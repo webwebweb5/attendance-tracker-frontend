@@ -22,6 +22,7 @@ import { PiMagnifyingGlassBold } from "react-icons/pi";
 import axios from "axios";
 import { DataTable } from "@/app/summary/data-table";
 import { columns } from "@/app/summary/columns";
+import { SummarySchema } from "@/schemas";
 
 interface IRecordData {
   studentId: string;
@@ -29,12 +30,7 @@ interface IRecordData {
   count: number;
 }
 
-const SummarySchema = z.object({
-  courseId: z.string().min(2, { message: "Course Id is required" }),
-});
-
 export default function SummaryForm() {
-  // State for monthly and semester picker
   const [selectedMonth, setSelectedMonth] = useState<Date>(
     startOfMonth(startOfToday())
   );
@@ -120,7 +116,6 @@ export default function SummaryForm() {
           name="courseId"
           render={({ field }) => (
             <FormItem>
-              {/* <FormLabel>Course Id</FormLabel> */}
               <FormControl>
                 <Input placeholder="Course Id" {...field} />
               </FormControl>
