@@ -51,6 +51,7 @@ export default function Attendance() {
 
   useEffect(() => {
     getLocation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getLocation = async (): Promise<void> => {
