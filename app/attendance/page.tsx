@@ -140,7 +140,7 @@ export default function Attendance() {
 
     try {
       const response: AxiosResponse<AttendanceResponse> = await axios.post(
-        "http://localhost:8080/api/attendance/record-attendance",
+        `${process.env.NEXT_PUBLIC_BACKEND_API}/attendance/record-attendance`,
         {
           ...values,
           location,
@@ -148,7 +148,7 @@ export default function Attendance() {
       );
 
       alert(response.data.message);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       alert(error.response?.data?.error);
     }
@@ -226,7 +226,9 @@ export default function Attendance() {
                 "ตรวจสอบตำแหน่ง GPS"
               )}
             </Button>
-            <Button type="submit" disabled={isLoading}>บันทึกเวลา</Button>
+            <Button type="submit" disabled={isLoading}>
+              บันทึกเวลา
+            </Button>
           </div>
         </form>
       </Form>

@@ -56,7 +56,7 @@ export default function SummaryForm() {
   async function handleMonthlySubmit(values: z.infer<typeof SummarySchema>) {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/attendance/monthly-report?courseId=${
+        `${process.env.NEXT_PUBLIC_BACKEND_API}/attendance/monthly-report?courseId=${
           values.courseId
         }&year=${selectedMonth.getFullYear()}&month=${
           selectedMonth.getMonth() + 1
@@ -74,7 +74,7 @@ export default function SummaryForm() {
   async function handleSemesterSubmit(values: z.infer<typeof SummarySchema>) {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/attendance/semester-report?courseId=${values.courseId}&semesterStartDate=${date?.from}&semesterEndDate=${date?.to}`
+        `${process.env.NEXT_PUBLIC_BACKEND_API}/attendance/semester-report?courseId=${values.courseId}&semesterStartDate=${date?.from}&semesterEndDate=${date?.to}`
       );
       setSelectedCourseId(values.courseId);
       setSearchType("Semester");
@@ -89,7 +89,7 @@ export default function SummaryForm() {
     if (searchType === "Semester") {
       try {
         await axios.get(
-          `http://localhost:8080/api/attendance/semester-report?courseId=${selectedCourseId}&semesterStartDate=${date?.from}&semesterEndDate=${date?.to}&export=true`
+          `${process.env.NEXT_PUBLIC_BACKEND_API}/attendance/semester-report?courseId=${selectedCourseId}&semesterStartDate=${date?.from}&semesterEndDate=${date?.to}&export=true`
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
@@ -100,7 +100,7 @@ export default function SummaryForm() {
     if (searchType === "Monthly") {
       try {
         await axios.get(
-          `http://localhost:8080/api/attendance/monthly-report?courseId=${selectedCourseId}&year=${selectedMonth.getFullYear()}&month=${
+          `${process.env.NEXT_PUBLIC_BACKEND_API}/attendance/monthly-report?courseId=${selectedCourseId}&year=${selectedMonth.getFullYear()}&month=${
             selectedMonth.getMonth() + 1
           }&export=true`
         );
