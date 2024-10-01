@@ -1,5 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,102 +17,142 @@ import {
 } from "@/components/ui/select";
 import { getDistanceFromLatLonInKm } from "@/utils";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LuLoader2 } from "react-icons/lu";
 import { PiArrowLeft } from "react-icons/pi";
-// import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface Location {
   lat: number | null;
   lng: number | null;
 }
 
+interface AttendanceResponse {
+  message: string;
+}
+
 const universityLat = 18.824518;
 const universityLng = 99.045474;
-const radius = 0.5;
+const radius = 1.5;
+
+const attendanceSchema = z.object({
+  studentId: z.string().min(2, {
+    message: "Student Id is required",
+  }),
+  courseId: z.string().min(2, {
+    message: "Course Id is required",
+  }),
+  action: z.string().min(2, {
+    message: "Action Id is required",
+  }),
+});
 
 export default function Attendance() {
-  const [studentId, setStudentId] = useState<string>("");
-  const [courseId, setCourseId] = useState<string>("");
+  // const [studentId, setStudentId] = useState<string>("");
+  // const [courseId, setCourseId] = useState<string>("");
   // const [action, setAction] = useState<string>("");
   const [location, setLocation] = useState<Location>({ lat: null, lng: null });
   const [isInUniversity, setIsInUniversity] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ฟังก์ชันสำหรับตรวจสอบ GPS
-  const getLocation = () => {
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  const getLocation = async (): Promise<void> => {
     setIsLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position: GeolocationPosition) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setIsLoading(false);
-          checkIfInsideUniversity();
-        },
-        (error) => {
-          alert("Error fetching location: " + error.message);
-          setIsLoading(false);
-        }
-      );
-    } else {
-      alert("Geolocation is not supported by this browser.");
-      setIsLoading(false);
-    }
+    return new Promise((resolve, reject) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position: GeolocationPosition) => {
+            setLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+            setIsLoading(false);
+            checkIfInsideUniversity(
+              position.coords.latitude,
+              position.coords.longitude
+            );
+            resolve();
+          },
+          (error) => {
+            alert("Error fetching location: " + error.message);
+            setIsLoading(false);
+            reject(error);
+          }
+        );
+      } else {
+        alert("Geolocation is not supported by this browser.");
+        setIsLoading(false);
+        reject(new Error("Geolocation not supported"));
+      }
+    });
   };
 
-  function checkIfInsideUniversity() {
-    if (!location) {
-      getLocation();
-    }
-
+  function checkIfInsideUniversity(lat: number, lng: number) {
     const distance = getDistanceFromLatLonInKm(
-      location.lat as number,
-      location.lng as number,
+      lat,
+      lng,
       universityLat,
       universityLng
     );
 
     if (distance <= radius) {
-      // return true; // อยู่ในเขตมหาวิทยาลัย
-      console.log("มหาวิทยาลัย", universityLat, universityLng);
-      console.log("ผู้ใช้", location.lat, location.lng);
       console.log("อยู่ในเขตมหาวิทยาลัย");
       setIsInUniversity(true);
     } else {
-      // return false; // อยู่นอกเขตมหาวิทยาลัย
-      console.log("มหาวิทยาลัย", universityLat, universityLng);
-      console.log("ผู้ใช้", location.lat, location.lng);
       console.log("อยู่นอกเขตมหาวิทยาลัย");
       setIsInUniversity(false);
     }
   }
 
-  // ฟังก์ชันสำหรับบันทึกเวลาเข้า-ออก
-  const recordAttendance = async () => {
+  const form = useForm<z.infer<typeof attendanceSchema>>({
+    resolver: zodResolver(attendanceSchema),
+    defaultValues: {
+      studentId: "",
+      courseId: "",
+      action: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof attendanceSchema>) {
+    // Wait for getLocation to complete
+    await getLocation();
+
     if (!location.lat || !location.lng) {
-      alert("Please enable location services");
+      alert("Unable to get location.");
+      return;
+    }
+
+    if (!isInUniversity) {
+      alert("บันทึกไม่สำเร็จ อยู่นอกเขตมหาวิทยาลัย");
       return;
     }
 
     try {
-      // const response = await axios.post(
-      //   "http://localhost:4000/api/attendance",
-      //   {
-      //     studentId,
-      //     courseId,
-      //     action,
-      //     location,
-      //   }
-      // );
+      const response: AxiosResponse<AttendanceResponse> = await axios.post(
+        "http://localhost:8080/api/attendance/record-attendance",
+        {
+          ...values,
+          location,
+        }
+      );
 
-      alert("Attendance recorded");
-    } catch (error) {
-      alert("Error recording attendance: " + error);
+      alert(response.data.message);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      alert(error.response?.data?.error);
     }
-  };
+  }
 
   return (
     <div className="flex flex-col space-y-4">
@@ -119,39 +163,73 @@ export default function Attendance() {
         </Link>
       </Button>
       <h1 className="text-4xl">บันทึกเวลาเข้า-ออกห้องเรียน</h1>
-      <Input
-        type="text"
-        placeholder="Student ID"
-        value={studentId}
-        onChange={(e) => setStudentId(e.target.value)}
-      />
-      <Input
-        type="text"
-        placeholder="Course ID"
-        value={courseId}
-        onChange={(e) => setCourseId(e.target.value)}
-      />
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder="เลือกการบันทึก" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>เลือกการบันทึก</SelectLabel>
-            <SelectItem value="in">เข้า</SelectItem>
-            <SelectItem value="out">ออก</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      <Button onClick={getLocation}>
-        {isLoading ? (
-          <LuLoader2 className="mr-2 w-5 h-5 animate-spin" />
-        ) : (
-          "ตรวจสอบตำแหน่ง GPS"
-        )}
-      </Button>
-      <Button onClick={recordAttendance}>บันทึกเวลา</Button>
-      <Button>ประวัติการบันทึก</Button>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="studentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Student Id</FormLabel>
+                <FormControl>
+                  <Input placeholder="Student ID" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="courseId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Course Id</FormLabel>
+                <FormControl>
+                  <Input placeholder="Course ID" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="action"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Course Id</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="เลือกการบันทึก" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>เลือกการบันทึก</SelectLabel>
+                      <SelectItem value="in">เข้า</SelectItem>
+                      <SelectItem value="out">ออก</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex gap-2">
+            <Button type="button" onClick={getLocation} disabled={isLoading}>
+              {isLoading ? (
+                <LuLoader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                "ตรวจสอบตำแหน่ง GPS"
+              )}
+            </Button>
+            <Button type="submit" disabled={isLoading}>บันทึกเวลา</Button>
+          </div>
+        </form>
+      </Form>
 
       {location && (
         <div>
